@@ -1,4 +1,4 @@
-import { heatmapData } from '../data/mockData'
+import type { HeatmapRow } from '../types'
 
 const severities = ['critical', 'high', 'medium', 'low'] as const
 const severityColors: Record<string, string> = {
@@ -8,7 +8,11 @@ const severityColors: Record<string, string> = {
     low: '#3b82f6',
 }
 
-export default function HeatmapSection() {
+interface Props {
+    data: HeatmapRow[]
+}
+
+export default function HeatmapSection({ data }: Props) {
     return (
         <section className="heatmap-section animate-fade-in-up delay-500">
             <h3 className="section-title">
@@ -16,7 +20,6 @@ export default function HeatmapSection() {
                 Vulnerability Heatmap
             </h3>
             <div className="glass-card heatmap-wrap">
-                {/* Column headers */}
                 <div className="heatmap-row" style={{ marginBottom: '8px' }}>
                     <div className="heatmap-label" />
                     <div className="heatmap-cells">
@@ -24,13 +27,9 @@ export default function HeatmapSection() {
                             <div
                                 key={s}
                                 style={{
-                                    flex: 1,
-                                    textAlign: 'center',
-                                    fontSize: '0.65rem',
-                                    fontWeight: 700,
-                                    color: severityColors[s],
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.5px',
+                                    flex: 1, textAlign: 'center', fontSize: '0.65rem',
+                                    fontWeight: 700, color: severityColors[s],
+                                    textTransform: 'uppercase', letterSpacing: '0.5px',
                                 }}
                             >
                                 {s}
@@ -38,9 +37,8 @@ export default function HeatmapSection() {
                         ))}
                     </div>
                 </div>
-
                 <div className="heatmap-grid">
-                    {heatmapData.map((row) => (
+                    {data.map((row) => (
                         <div key={row.category} className="heatmap-row">
                             <div className="heatmap-label">{row.category}</div>
                             <div className="heatmap-cells">
@@ -60,14 +58,10 @@ export default function HeatmapSection() {
                         </div>
                     ))}
                 </div>
-
                 <div className="heatmap-legend">
                     {severities.map((s) => (
                         <div key={s} className="heatmap-legend-item">
-                            <div
-                                className="heatmap-legend-dot"
-                                style={{ background: severityColors[s] }}
-                            />
+                            <div className="heatmap-legend-dot" style={{ background: severityColors[s] }} />
                             <span style={{ textTransform: 'capitalize' }}>{s}</span>
                         </div>
                     ))}

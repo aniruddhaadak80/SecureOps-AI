@@ -1,4 +1,10 @@
-export default function Header() {
+interface Props {
+    onNewScan: () => void
+    isScanning: boolean
+    hasData: boolean
+}
+
+export default function Header({ onNewScan, isScanning }: Props) {
     return (
         <header className="header">
             <div className="header-inner">
@@ -17,8 +23,8 @@ export default function Header() {
                         <div className="status-dot"></div>
                         <span>Archestra Connected</span>
                     </div>
-                    <button className="btn-scan">
-                        <span>⚡</span> New Scan
+                    <button className="btn-scan" onClick={onNewScan} disabled={isScanning}>
+                        <span>⚡</span> {isScanning ? 'Scanning...' : 'New Scan'}
                     </button>
                 </div>
             </div>

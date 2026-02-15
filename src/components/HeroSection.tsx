@@ -1,7 +1,8 @@
-import { mockScanResult } from '../data/mockData'
-import SecurityScoreRing from './SecurityScoreRing'
+interface Props {
+    onScan: () => void
+}
 
-export default function HeroSection() {
+export default function HeroSection({ onScan }: Props) {
     return (
         <section className="hero animate-fade-in-up">
             <div className="hero-tag">
@@ -17,31 +18,31 @@ export default function HeroSection() {
                 security vulnerabilities in your codebase — orchestrated and governed
                 through Archestra's MCP platform.
             </p>
-            <div className="hero-stats">
-                <SecurityScoreRing score={mockScanResult.securityScore} />
-                <div className="hero-stat animate-fade-in-up delay-200">
-                    <div className="hero-stat-value" style={{ color: 'var(--accent-cyan)' }}>
-                        {mockScanResult.scannedFiles.toLocaleString()}
-                    </div>
-                    <div className="hero-stat-label">Files Scanned</div>
+            <div style={{ marginTop: '32px' }}>
+                <button className="btn-scan-hero" onClick={onScan}>
+                    ⚡ Scan Your Project Now
+                </button>
+            </div>
+            <div className="hero-features">
+                <div className="hero-feature">
+                    <span className="hero-feature-icon">🔍</span>
+                    <span className="hero-feature-title">Code Scanner</span>
+                    <span className="hero-feature-desc">8 security pattern rules</span>
                 </div>
-                <div className="hero-stat animate-fade-in-up delay-300">
-                    <div className="hero-stat-value" style={{ color: 'var(--accent-red)' }}>
-                        {mockScanResult.totalVulnerabilities}
-                    </div>
-                    <div className="hero-stat-label">Vulnerabilities</div>
+                <div className="hero-feature">
+                    <span className="hero-feature-icon">📦</span>
+                    <span className="hero-feature-title">Dep Auditor</span>
+                    <span className="hero-feature-desc">CVE vulnerability database</span>
                 </div>
-                <div className="hero-stat animate-fade-in-up delay-400">
-                    <div className="hero-stat-value" style={{ color: 'var(--accent-green)' }}>
-                        {mockScanResult.fixedCount}
-                    </div>
-                    <div className="hero-stat-label">Auto-Fixed</div>
+                <div className="hero-feature">
+                    <span className="hero-feature-icon">🧠</span>
+                    <span className="hero-feature-title">Vuln Analyzer</span>
+                    <span className="hero-feature-desc">CVSS risk scoring</span>
                 </div>
-                <div className="hero-stat animate-fade-in-up delay-500">
-                    <div className="hero-stat-value" style={{ color: 'var(--accent-purple)' }}>
-                        {mockScanResult.scanDuration}
-                    </div>
-                    <div className="hero-stat-label">Scan Duration</div>
+                <div className="hero-feature">
+                    <span className="hero-feature-icon">🔧</span>
+                    <span className="hero-feature-title">Remediation</span>
+                    <span className="hero-feature-desc">Auto-fix suggestions</span>
                 </div>
             </div>
         </section>
