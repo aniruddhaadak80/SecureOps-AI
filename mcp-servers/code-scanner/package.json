@@ -1,0 +1,14 @@
+{
+    "name": "secureops-code-scanner",
+    "version": "1.0.0",
+    "description": "MCP server that scans repositories for security vulnerabilities, hardcoded secrets, and insecure patterns",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "node --watch index.js"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.0.0"
+    }
+}

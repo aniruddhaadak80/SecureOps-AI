@@ -1,0 +1,14 @@
+{
+    "name": "secureops-remediation",
+    "version": "1.0.0",
+    "description": "MCP server that generates automated security fix suggestions and patches",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "node --watch index.js"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.0.0"
+    }
+}

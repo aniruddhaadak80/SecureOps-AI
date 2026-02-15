@@ -1,0 +1,75 @@
+# ============================================
+# SecureOps AI — Docker Compose
+# Runs Archestra Platform + 4 MCP servers
+# ============================================
+
+services:
+  # ---- Archestra Platform ----
+  archestra:
+    image: archestra/platform:latest
+    container_name: archestra-platform
+    ports:
+      - "9000:9000"   # Archestra API + MCP Gateway
+      - "3000:3000"   # Archestra Dashboard UI
+    environment:
+      - ARCHESTRA_QUICKSTART=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - archestra-postgres-data:/var/lib/postgresql/data
+      - archestra-app-data:/app/data
+    restart: unless-stopped
+    networks:
+      - secureops
+
+  # ---- 1. Code Scanner MCP Server ----
+  code-scanner:
+    build:
+      context: ./mcp-servers/code-scanner
+      dockerfile: Dockerfile
+    container_name: secureops-code-scanner
+    restart: unless-stopped
+    networks:
+      - secureops
+    volumes:
+      - scan-targets:/workspaces  # Mount repos to scan
+
+  # ---- 2. Dependency Auditor MCP Server ----
+  dependency-auditor:
+    build:
+      context: ./mcp-servers/dependency-auditor
+      dockerfile: Dockerfile
+    container_name: secureops-dependency-auditor
+    restart: unless-stopped
+    networks:
+      - secureops
+    volumes:
+      - scan-targets:/workspaces
+
+  # ---- 3. Vulnerability Analyzer MCP Server ----
+  vuln-analyzer:
+    build:
+      context: ./mcp-servers/vuln-analyzer
+      dockerfile: Dockerfile
+    container_name: secureops-vuln-analyzer
+    restart: unless-stopped
+    networks:
+      - secureops
+
+  # ---- 4. Remediation Agent MCP Server ----
+  remediation:
+    build:
+      context: ./mcp-servers/remediation
+      dockerfile: Dockerfile
+    container_name: secureops-remediation
+    restart: unless-stopped
+    networks:
+      - secureops
+
+volumes:
+  archestra-postgres-data:
+  archestra-app-data:
+  scan-targets:
+
+networks:
+  secureops:
+    driver: bridge

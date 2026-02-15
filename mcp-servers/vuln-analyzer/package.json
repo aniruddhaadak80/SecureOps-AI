@@ -1,0 +1,14 @@
+{
+    "name": "secureops-vuln-analyzer",
+    "version": "1.0.0",
+    "description": "MCP server that performs deep vulnerability analysis with CVSS scoring and impact assessment",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "node --watch index.js"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.0.0"
+    }
+}

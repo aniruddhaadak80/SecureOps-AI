@@ -1,0 +1,32 @@
+{
+    "mcpServers": {
+        "secureops-code-scanner": {
+            "command": "node",
+            "args": [
+                "mcp-servers/code-scanner/index.js"
+            ],
+            "description": "Scans repositories for hardcoded secrets, SQL injection, XSS, and 8+ security patterns"
+        },
+        "secureops-dependency-auditor": {
+            "command": "node",
+            "args": [
+                "mcp-servers/dependency-auditor/index.js"
+            ],
+            "description": "Audits npm/Python dependencies against a known CVE database"
+        },
+        "secureops-vuln-analyzer": {
+            "command": "node",
+            "args": [
+                "mcp-servers/vuln-analyzer/index.js"
+            ],
+            "description": "Deep vulnerability analysis with CVSS scoring, risk assessment, and impact evaluation"
+        },
+        "secureops-remediation": {
+            "command": "node",
+            "args": [
+                "mcp-servers/remediation/index.js"
+            ],
+            "description": "Generates fix suggestions, code patches, and prioritized remediation plans"
+        }
+    }
+}

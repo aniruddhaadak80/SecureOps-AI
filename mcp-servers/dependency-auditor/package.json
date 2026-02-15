@@ -1,0 +1,14 @@
+{
+    "name": "secureops-dependency-auditor",
+    "version": "1.0.0",
+    "description": "MCP server that audits project dependencies for known vulnerabilities",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "node --watch index.js"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.0.0"
+    }
+}
