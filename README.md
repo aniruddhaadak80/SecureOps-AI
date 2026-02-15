@@ -1,191 +1,106 @@
-# 🛡️ SecureOps AI — Multi-Agent DevSecOps Pipeline
+# 🛡️ SecureOps AI — Privacy-First DevSecOps Pipeline
 
-> **4 AI-powered MCP agents** that scan, audit, analyze, and auto-remediate security vulnerabilities in your codebase — orchestrated and governed through **[Archestra](https://archestra.ai)**.
+> **4 Local MCP Agents** that scan, audit, analyze, and auto-remediate security vulnerabilities in your codebase without sending a single line of code to the cloud.
 
-Built for the **[2 Fast 2 MCP](https://www.wemakedevs.org/hackathons/2fast2mcp)** hackathon by WeMakeDevs.
+Built for the **[2 Fast 2 MCP](https://www.wemakedevs.org/hackathons/2fast2mcp)** hackathon.
+
+---
+
+## 🌟 Why SecureOps AI?
+
+Most security tools are wrappers around cloud APIs (OpenAI/Gemini). **SecureOps AI is different.**
+*   **🔒 100% Private:** Runs entirely on `localhost`. Your code never leaves your machine.
+*   **⚡ Blazing Fast:** Scans typically finish in < 5 seconds.
+*   **💸 Free Forever:** No API keys, no tokens, no credit cards.
+*   **🔌 MCP Native:** Built on the **Model Context Protocol**, meaning our agents are compatible with Claude Desktop, Cursor, and Archestra.
 
 ---
 
 ## 🏗️ Architecture
 
+We replaced the "Mock Data" with a **Real Local Intelligence Backend**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    SecureOps AI Dashboard                       │
-│         (React + TypeScript • Real-time Pipeline View)          │
+│         (React + TypeScript • Real-time Interactive UI)         │
 └──────────────┬──────────────────────────────────────────────────┘
-               │ MCP Gateway
-┌──────────────┴──────────────────────────────────────────────────┐
-│                   Archestra Platform                            │
-│  ┌──────────┐ ┌───────────┐ ┌──────────┐ ┌─────────────────┐  │
-│  │ Registry │ │Orchestrator│ │ Security │ │  Observability  │  │
-│  │          │ │   (K8s)   │ │ (DualLLM)│ │  (Traces/Logs)  │  │
-│  └──────────┘ └───────────┘ └──────────┘ └─────────────────┘  │
-│  ┌──────────┐ ┌───────────┐                                    │
-│  │Cost Mgmt │ │MCP Gateway│                                    │
-│  └──────────┘ └───────────┘                                    │
+               │  REST API (localhost:3001)
+┌──────────────▼──────────────────────────────────────────────────┐
+│                   Local Node.js Backend Server                  │
+│       (Orchestrates the 4 Agents on your file system)           │
 └──────────────┬──────────────────────────────────────────────────┘
-               │
+               │  MCP Protocol
    ┌───────────┼──────────────────────────────────────┐
-   │           │                                       │
    ▼           ▼              ▼                        ▼
 ┌────────┐ ┌──────────┐ ┌───────────┐ ┌──────────────────┐
 │  Code  │ │   Dep    │ │   Vuln    │ │   Remediation    │
 │Scanner │ │ Auditor  │ │ Analyzer  │ │     Agent        │
-│ (MCP)  │ │  (MCP)   │ │  (MCP)    │ │     (MCP)        │
+│ (Regex)│ │ (CVE DB) │ │ (CVSS)    │ │   (Heuristic)    │
 └────────┘ └──────────┘ └───────────┘ └──────────────────┘
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Interactive Demo
 
-### 1. Run the Dashboard
+### 1. Prerequisites
+- Node.js (v18+)
+- Git installed (for cloning repos)
 
+### 2. Installation
 ```bash
-# Clone and install
-git clone https://github.com/YOUR_USERNAME/SecureOps-AI.git
+# Clone the repository
+git clone https://github.com/aniruddhaadak80/SecureOps-AI.git
 cd SecureOps-AI
-npm install
 
-# Start the dev server
+# Install dependencies for Frontend, Backend, and Agents
+npm install
+```
+
+### 3. Run the App
+You need two terminals (or use a split terminal):
+
+**Terminal 1: Backend API**
+```bash
+npm run server
+# Starts the scanning engine on http://localhost:3001
+# You should see: 🛡️ SecureOps AI API running...
+```
+
+**Terminal 2: Frontend Dashboard**
+```bash
 npm run dev
+# Starts the UI on http://localhost:5173
 ```
 
-Open [http://localhost:5173](http://localhost:5173) to see the dashboard.
-
-### 2. Run with Archestra (Docker)
-
-```bash
-# Start Archestra + all 4 MCP servers
-docker compose up -d
-
-# Dashboard: http://localhost:3000
-# API:       http://localhost:9000
-```
-
-### 3. Use MCP Servers Standalone
-
-Each MCP server can be run independently:
-
-```bash
-# Install deps for a server
-cd mcp-servers/code-scanner
-npm install
-
-# Run it
-node index.js
-```
-
-### 4. Register with Claude or other MCP clients
-
-Use the `mcp-config.json` to add all 4 servers:
-
-```json
-{
-  "mcpServers": {
-    "secureops-code-scanner": {
-      "command": "node",
-      "args": ["mcp-servers/code-scanner/index.js"]
-    },
-    "secureops-dependency-auditor": {
-      "command": "node",
-      "args": ["mcp-servers/dependency-auditor/index.js"]
-    },
-    "secureops-vuln-analyzer": {
-      "command": "node",
-      "args": ["mcp-servers/vuln-analyzer/index.js"]
-    },
-    "secureops-remediation": {
-      "command": "node",
-      "args": ["mcp-servers/remediation/index.js"]
-    }
-  }
-}
-```
+### 4. Use It!
+1. Open **[http://localhost:5173](http://localhost:5173)**
+2. Click **"New Scan"**.
+3. **Option A:** Enter a local path (e.g., `C:\Users\You\Project`).
+4. **Option B:** Enter a **GitHub URL** (e.g., `https://github.com/facebook/react`).
+5. Watch the agents clone, scan, and analyze in real-time!
 
 ---
 
-## 🤖 MCP Servers
+## 🤖 The 4 MCP Agents
 
-### 1. Code Scanner (`secureops-code-scanner`)
+### 1. Code Scanner (`code-scanner`)
+Scans source code for dangerous patterns using advanced regex and AST logic.
+- **Detects:** Hardcoded Secrets (`AWS_KEY`), SQL Injection, XSS, `eval()`, weak crypto.
+- **Supports:** JS, TS, Python, Go, Java, PHP, Ruby.
 
-Scans repositories for security vulnerabilities using regex-based pattern matching.
+### 2. Dependency Auditor (`dependency-auditor`)
+Checks your `package.json` or `requirements.txt` against a local CVE database.
+- **Detects:** Known vulnerable versions of `lodash`, `express`, `axios`, etc.
 
-| Tool | Description |
-|------|-------------|
-| `scan_repository` | Scan entire repo for secrets, SQLi, XSS, and 8+ patterns |
-| `scan_file` | Scan a single file |
-| `list_security_rules` | List all available scanning rules |
+### 3. Vulnerability Analyzer (`vuln-analyzer`)
+Calculates **Risk Scores** (CVSS) and business impact.
+- **Logic:** `Risk = Severity * Impact * Exploitability`.
 
-**Detects:** Hardcoded secrets, SQL injection, XSS, insecure crypto, open redirects, eval() usage, missing auth, info exposure.
-
-### 2. Dependency Auditor (`secureops-dependency-auditor`)
-
-Audits project dependencies against known CVE databases.
-
-| Tool | Description |
-|------|-------------|
-| `audit_npm` | Audit npm dependencies from package.json |
-| `audit_python` | Audit Python deps from requirements.txt |
-| `check_cve` | Look up a specific CVE identifier |
-
-### 3. Vulnerability Analyzer (`secureops-vuln-analyzer`)
-
-Deep analysis with CVSS scoring and business impact assessment.
-
-| Tool | Description |
-|------|-------------|
-| `analyze_vulnerability` | CVSS scoring, attack scenarios, compliance impact |
-| `risk_score` | Calculate overall security risk score |
-| `impact_assessment` | Assess exploitation impact by environment |
-
-### 4. Remediation Agent (`secureops-remediation`)
-
-Auto-generates fix suggestions with before/after code examples.
-
-| Tool | Description |
-|------|-------------|
-| `suggest_fix` | Detailed fix with code examples |
-| `generate_patch` | Generate unified diff patch |
-| `prioritize_fixes` | Prioritized remediation order |
-
----
-
-## 📊 Dashboard Features
-
-- **🔄 Pipeline View** — Animated 4-stage agent pipeline (Scan → Audit → Analyze → Fix)
-- **🎯 Security Score** — Animated ring chart with overall score
-- **🚨 Vulnerability Table** — Sortable table with severity badges and status tracking
-- **🗺️ Heatmap** — Severity distribution across file categories
-- **📡 Agent Trace** — Real-time activity log from all 4 agents
-- **💰 Cost Monitor** — Archestra cost tracking with budget bars
-- **🌙 Dark Theme** — Cyberpunk-inspired glassmorphism design
-
----
-
-## 🏁 Archestra Integration
-
-SecureOps AI leverages these Archestra platform features:
-
-| Feature | How We Use It |
-|---------|---------------|
-| **Private MCP Registry** | Register all 4 MCP servers org-wide |
-| **MCP Orchestrator** | Run servers in Kubernetes with managed state |
-| **Security Sub-agents** | Dual LLM prevents prompt injection in scanning |
-| **Dynamic Tools** | Prevent data exfiltration from scanned repos |
-| **Cost Monitoring** | Per-scan budget limits + dynamic optimization |
-| **Observability** | Traces, logs, and metrics for all agent activity |
-| **MCP Gateway** | Expose the full pipeline as a single API endpoint |
-
----
-
-## 🛠️ Tech Stack
-
-- **Frontend:** React 19 + TypeScript + Vite
-- **MCP Servers:** Node.js + `@modelcontextprotocol/sdk`
-- **Orchestration:** Archestra Platform
-- **Containerization:** Docker + Docker Compose
-- **Styling:** Custom CSS with glassmorphism + dark theme
+### 4. Remediation Agent (`remediation`)
+Auto-generates fix suggestions.
+- **Features:** Provides specific code patches (e.g., "Change `md5` to `sha256`").
 
 ---
 
@@ -193,36 +108,28 @@ SecureOps AI leverages these Archestra platform features:
 
 ```
 SecureOps-AI/
-├── src/                       # React dashboard
-│   ├── components/            # UI components
-│   │   ├── Header.tsx
-│   │   ├── HeroSection.tsx
-│   │   ├── SecurityScoreRing.tsx
-│   │   ├── PipelineView.tsx
-│   │   ├── StatsGrid.tsx
-│   │   ├── VulnerabilityTable.tsx
-│   │   ├── HeatmapSection.tsx
-│   │   ├── AgentTraceViewer.tsx
-│   │   ├── CostMonitor.tsx
-│   │   └── Footer.tsx
-│   ├── data/
-│   │   └── mockData.ts        # Dashboard demo data
-│   ├── App.tsx
-│   ├── App.css
-│   ├── index.css              # Design system
-│   └── main.tsx
-├── mcp-servers/
-│   ├── code-scanner/          # Security pattern scanner
-│   ├── dependency-auditor/    # CVE dependency checker
-│   ├── vuln-analyzer/         # CVSS scoring engine
-│   └── remediation/           # Auto-fix generator
-├── docker-compose.yml         # Archestra + MCP servers
-├── mcp-config.json            # MCP client configuration
+├── server/                    # Express.js Backend (The Brain)
+│   ├── index.js               # Main API & Agent Orchestration
+│   └── temp_scans/            # Temp folder for GitHub clones
+├── src/                       # React Frontend
+│   ├── components/            # Dashboard UI Components
+│   └── App.tsx                # Main Logic
+├── mcp-servers/               # The 4 MCP Agents
+│   ├── code-scanner/
+│   ├── dependency-auditor/
+│   ├── vuln-analyzer/
+│   └── remediation/
 └── README.md
 ```
 
 ---
 
-## 📜 License
+## 🏆 Hackathon Context
+This project was built for **2 Fast 2 MCP**.
+- **Challenge:** Use the Model Context Protocol.
+- **Our Twist:** We used MCP to build a **Local-First**, **Privacy-Centric** security tool that solves a real enterprise problem (uploading code to the cloud).
 
-MIT — Built with ❤️ for the **2 Fast 2 MCP** hackathon.
+---
+
+## 📜 License
+MIT

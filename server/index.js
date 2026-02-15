@@ -257,139 +257,200 @@ function generateRemediations(vulns) {
     });
 }
 
+// ============ Constants ============
+import os from 'os';
+
+const TEMP_DIR = path.join(os.tmpdir(), 'secureops-scans');
+if (!fs.existsSync(TEMP_DIR)) {
+    fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
+
+// ============ Helpers ============
+import { exec } from 'child_process';
+import { promisify } from 'util';
+const execAsync = promisify(exec);
+
+async function cloneRepo(url) {
+    const repoName = url.split('/').pop().replace('.git', '');
+    const targetDir = path.join(TEMP_DIR, `${repoName}-${Date.now()}`);
+
+    try {
+        await execAsync(`git clone "${url}" "${targetDir}"`);
+        return targetDir;
+    } catch (err) {
+        throw new Error(`Failed to clone repository: ${err.message}`);
+    }
+}
+
 // ============ API Routes ============
 
+// GET / - Welcome message
+app.get('/', (req, res) => {
+    res.send(`
+    <div style="font-family: monospace; padding: 20px; background: #0a0e1a; color: #06d6a0; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <h1>🛡️ SecureOps AI API</h1>
+      <p>Status: 🟢 Online</p>
+      <p>Endpoints:</p>
+      <ul>
+        <li>POST /api/scan</li>
+        <li>GET /api/health</li>
+      </ul>
+      <p style="color: #64748b; margin-top: 20px;">Use the Dashboard at localhost:5173 to interact.</p>
+    </div>
+  `);
+});
+
 // POST /api/scan — Full pipeline scan
-app.post('/api/scan', (req, res) => {
-    const { directory } = req.body;
+app.post('/api/scan', async (req, res) => {
+    let { directory } = req.body;
+    let isTemp = false;
 
     if (!directory) {
-        return res.status(400).json({ error: 'directory path is required' });
+        return res.status(400).json({ error: 'directory path or repo URL is required' });
     }
 
-    const resolvedPath = path.resolve(directory);
-    if (!fs.existsSync(resolvedPath)) {
-        return res.status(400).json({ error: `Directory not found: ${resolvedPath}` });
+    try {
+        // Check if input is a URL
+        if (directory.startsWith('http') || directory.startsWith('git@') || directory.startsWith('github.com')) {
+            if (!directory.startsWith('http') && !directory.startsWith('git@')) {
+                directory = `https://${directory}`;
+            }
+            console.log(`⬇️ Cloning ${directory}...`);
+            directory = await cloneRepo(directory);
+            isTemp = true;
+        }
+
+        const resolvedPath = path.resolve(directory);
+        if (!fs.existsSync(resolvedPath)) {
+            return res.status(400).json({ error: `Directory not found: ${resolvedPath}` });
+        }
+
+        console.log(`🔍 Scanning ${resolvedPath}...`);
+
+        // Stage 1: Code Scan
+        const codeScan = scanDirectory(resolvedPath);
+
+        // Stage 2: Dependency Audit
+        const depAudit = auditDependencies(resolvedPath);
+
+        // Combine all findings
+        const allFindings = [...codeScan.findings, ...depAudit.findings];
+
+        // Stage 3: Vulnerability Analysis (CVSS scoring)
+        const severityCounts = {
+            critical: allFindings.filter(f => f.severity === 'critical').length,
+            high: allFindings.filter(f => f.severity === 'high').length,
+            medium: allFindings.filter(f => f.severity === 'medium').length,
+            low: allFindings.filter(f => f.severity === 'low').length,
+        };
+
+        const weights = { critical: 10, high: 7, medium: 4, low: 1 };
+        const totalRisk = Object.entries(severityCounts).reduce((sum, [sev, count]) => sum + (weights[sev] || 1) * count, 0);
+        const maxRisk = allFindings.length * 10;
+        const securityScore = maxRisk > 0 ? Math.max(0, Math.round(100 - (totalRisk / maxRisk) * 100)) : 100;
+
+        // Stage 4: Remediations
+        const remediations = generateRemediations(allFindings);
+        const autoFixable = remediations.filter(r => r.effort === 'low').length;
+
+        // Build pipeline stages
+        const pipeline = [
+            {
+                id: 'scan',
+                name: 'Code Scan',
+                icon: '🔍',
+                status: 'completed',
+                agent: 'code-scanner',
+                progress: 100,
+                findings: codeScan.findings.length,
+                duration: `${(codeScan.duration / 1000).toFixed(1)}s`,
+            },
+            {
+                id: 'audit',
+                name: 'Dep Audit',
+                icon: '📦',
+                status: 'completed',
+                agent: 'dependency-auditor',
+                progress: 100,
+                findings: depAudit.findings.length,
+                duration: '<1s',
+            },
+            {
+                id: 'analyze',
+                name: 'Vuln Analysis',
+                icon: '🧠',
+                status: 'completed',
+                agent: 'vuln-analyzer',
+                progress: 100,
+                findings: allFindings.length,
+                duration: '<1s',
+            },
+            {
+                id: 'fix',
+                name: 'Auto-Fix',
+                icon: '🔧',
+                status: 'completed',
+                agent: 'remediation',
+                progress: 100,
+                findings: autoFixable,
+                duration: '<1s',
+            },
+        ];
+
+        // Build agent activity trace
+        const now = new Date();
+        const fmt = (offset) => {
+            const d = new Date(now.getTime() - offset);
+            return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        };
+
+        const activities = [
+            ...(isTemp ? [{ id: 'a0', agent: 'system', action: `Cloned repository`, target: req.body.directory, status: 'completed', timestamp: fmt(5000) }] : []),
+            { id: 'a1', agent: 'code-scanner', action: `Scanning ${codeScan.filesScanned} source files`, target: path.basename(resolvedPath), status: 'completed', timestamp: fmt(4000), duration: `${(codeScan.duration / 1000).toFixed(1)}s` },
+            ...codeScan.findings.slice(0, 3).map((f, i) => ({
+                id: `a${2 + i}`, agent: 'code-scanner', action: `Found: ${f.title}`, target: `${f.file}:${f.line}`, status: 'warning', timestamp: fmt(3000 - i * 500),
+            })),
+            { id: 'a5', agent: 'dependency-auditor', action: `Audited ${depAudit.totalDeps} npm packages`, target: 'package.json', status: 'completed', timestamp: fmt(2000), duration: '<1s' },
+            ...depAudit.findings.slice(0, 2).map((f, i) => ({
+                id: `a${6 + i}`, agent: 'dependency-auditor', action: `Vulnerable: ${f.title}`, target: f.cve, status: 'warning', timestamp: fmt(1500 - i * 300),
+            })),
+            { id: 'a8', agent: 'vuln-analyzer', action: `Computed risk score: ${securityScore}/100`, target: `${allFindings.length} findings`, status: 'completed', timestamp: fmt(1000) },
+            { id: 'a9', agent: 'remediation', action: `Generated ${remediations.length} fix suggestions`, target: `${autoFixable} auto-fixable`, status: 'completed', timestamp: fmt(500) },
+        ];
+
+        // Build heatmap data
+        const categoryMap = {};
+        for (const f of allFindings) {
+            const cat = f.category || 'Other';
+            if (!categoryMap[cat]) categoryMap[cat] = { category: cat, critical: 0, high: 0, medium: 0, low: 0 };
+            categoryMap[cat][f.severity]++;
+        }
+        const heatmap = Object.values(categoryMap);
+
+        res.json({
+            scanResult: {
+                totalFiles: codeScan.totalFiles,
+                scannedFiles: codeScan.filesScanned,
+                totalVulnerabilities: allFindings.length,
+                ...severityCounts,
+                fixedCount: autoFixable,
+                securityScore,
+                scanDuration: `${(codeScan.duration / 1000).toFixed(1)}s`,
+                costUsd: parseFloat((allFindings.length * 0.02 + 0.1).toFixed(2)),
+                tokensUsed: codeScan.filesScanned * 65 + allFindings.length * 120,
+            },
+            pipeline,
+            vulnerabilities: allFindings.slice(0, 30), // top 30
+            activities,
+            heatmap: heatmap.length > 0 ? heatmap : [{ category: 'None', critical: 0, high: 0, medium: 0, low: 0 }],
+            remediations: remediations.slice(0, 10),
+            directory: isTemp ? req.body.directory : resolvedPath,
+        });
+
+    } catch (error) {
+        console.error('Scan error:', error);
+        res.status(500).json({ error: error.message || 'Internal server error during scan' });
     }
-
-    // Stage 1: Code Scan
-    const codeScan = scanDirectory(resolvedPath);
-
-    // Stage 2: Dependency Audit
-    const depAudit = auditDependencies(resolvedPath);
-
-    // Combine all findings
-    const allFindings = [...codeScan.findings, ...depAudit.findings];
-
-    // Stage 3: Vulnerability Analysis (CVSS scoring)
-    const severityCounts = {
-        critical: allFindings.filter(f => f.severity === 'critical').length,
-        high: allFindings.filter(f => f.severity === 'high').length,
-        medium: allFindings.filter(f => f.severity === 'medium').length,
-        low: allFindings.filter(f => f.severity === 'low').length,
-    };
-
-    const weights = { critical: 10, high: 7, medium: 4, low: 1 };
-    const totalRisk = Object.entries(severityCounts).reduce((sum, [sev, count]) => sum + (weights[sev] || 1) * count, 0);
-    const maxRisk = allFindings.length * 10;
-    const securityScore = maxRisk > 0 ? Math.max(0, Math.round(100 - (totalRisk / maxRisk) * 100)) : 100;
-
-    // Stage 4: Remediations
-    const remediations = generateRemediations(allFindings);
-    const autoFixable = remediations.filter(r => r.effort === 'low').length;
-
-    // Build pipeline stages
-    const pipeline = [
-        {
-            id: 'scan',
-            name: 'Code Scan',
-            icon: '🔍',
-            status: 'completed',
-            agent: 'code-scanner',
-            progress: 100,
-            findings: codeScan.findings.length,
-            duration: `${(codeScan.duration / 1000).toFixed(1)}s`,
-        },
-        {
-            id: 'audit',
-            name: 'Dep Audit',
-            icon: '📦',
-            status: 'completed',
-            agent: 'dependency-auditor',
-            progress: 100,
-            findings: depAudit.findings.length,
-            duration: '<1s',
-        },
-        {
-            id: 'analyze',
-            name: 'Vuln Analysis',
-            icon: '🧠',
-            status: 'completed',
-            agent: 'vuln-analyzer',
-            progress: 100,
-            findings: allFindings.length,
-            duration: '<1s',
-        },
-        {
-            id: 'fix',
-            name: 'Auto-Fix',
-            icon: '🔧',
-            status: 'completed',
-            agent: 'remediation',
-            progress: 100,
-            findings: autoFixable,
-            duration: '<1s',
-        },
-    ];
-
-    // Build agent activity trace
-    const now = new Date();
-    const fmt = (offset) => {
-        const d = new Date(now.getTime() - offset);
-        return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    };
-
-    const activities = [
-        { id: 'a1', agent: 'code-scanner', action: `Scanning ${codeScan.filesScanned} source files`, target: resolvedPath, status: 'completed', timestamp: fmt(4000), duration: `${(codeScan.duration / 1000).toFixed(1)}s` },
-        ...codeScan.findings.slice(0, 3).map((f, i) => ({
-            id: `a${2 + i}`, agent: 'code-scanner', action: `Found: ${f.title}`, target: `${f.file}:${f.line}`, status: 'warning', timestamp: fmt(3000 - i * 500),
-        })),
-        { id: 'a5', agent: 'dependency-auditor', action: `Audited ${depAudit.totalDeps} npm packages`, target: 'package.json', status: 'completed', timestamp: fmt(2000), duration: '<1s' },
-        ...depAudit.findings.slice(0, 2).map((f, i) => ({
-            id: `a${6 + i}`, agent: 'dependency-auditor', action: `Vulnerable: ${f.title}`, target: f.cve, status: 'warning', timestamp: fmt(1500 - i * 300),
-        })),
-        { id: 'a8', agent: 'vuln-analyzer', action: `Computed risk score: ${securityScore}/100`, target: `${allFindings.length} findings`, status: 'completed', timestamp: fmt(1000) },
-        { id: 'a9', agent: 'remediation', action: `Generated ${remediations.length} fix suggestions`, target: `${autoFixable} auto-fixable`, status: 'completed', timestamp: fmt(500) },
-    ];
-
-    // Build heatmap data
-    const categoryMap = {};
-    for (const f of allFindings) {
-        const cat = f.category || 'Other';
-        if (!categoryMap[cat]) categoryMap[cat] = { category: cat, critical: 0, high: 0, medium: 0, low: 0 };
-        categoryMap[cat][f.severity]++;
-    }
-    const heatmap = Object.values(categoryMap);
-
-    res.json({
-        scanResult: {
-            totalFiles: codeScan.totalFiles,
-            scannedFiles: codeScan.filesScanned,
-            totalVulnerabilities: allFindings.length,
-            ...severityCounts,
-            fixedCount: autoFixable,
-            securityScore,
-            scanDuration: `${(codeScan.duration / 1000).toFixed(1)}s`,
-            costUsd: parseFloat((allFindings.length * 0.02 + 0.1).toFixed(2)),
-            tokensUsed: codeScan.filesScanned * 65 + allFindings.length * 120,
-        },
-        pipeline,
-        vulnerabilities: allFindings.slice(0, 30), // top 30
-        activities,
-        heatmap: heatmap.length > 0 ? heatmap : [{ category: 'None', critical: 0, high: 0, medium: 0, low: 0 }],
-        remediations: remediations.slice(0, 10),
-        directory: resolvedPath,
-    });
 });
 
 // GET /api/health

@@ -26,15 +26,17 @@ export default function ScanModal({ onScan, onClose }: Props) {
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
                 <p className="modal-desc">
-                    Enter the path to a project directory. All 4 AI agents will analyze it for security vulnerabilities.
+                    Enter a <strong>local directory path</strong> OR a <strong>GitHub URL</strong>.
+                    <br />
+                    All 4 AI agents will analyze the target for security vulnerabilities.
                 </p>
                 <form onSubmit={handleSubmit}>
                     <div className="modal-input-group">
-                        <label>Project Directory</label>
+                        <label>Project Directory or Repo URL</label>
                         <input
                             type="text"
                             className="modal-input"
-                            placeholder="C:\path\to\your\project"
+                            placeholder="e.g. C:\Projects\MyApp OR https://github.com/user/repo"
                             value={dir}
                             onChange={(e) => setDir(e.target.value)}
                             autoFocus
@@ -47,11 +49,29 @@ export default function ScanModal({ onScan, onClose }: Props) {
                                 key={p.path}
                                 type="button"
                                 className="preset-btn"
-                                onClick={() => { setDir(p.path); onScan(p.path); }}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDir(p.path);
+                                    onScan(p.path);
+                                }}
                             >
                                 {p.label}
                             </button>
                         ))}
+                        <button
+                            type="button"
+                            className="preset-btn"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const url = 'https://github.com/aniruddhaadak80/SecureOps-AI';
+                                setDir(url);
+                                onScan(url);
+                            }}
+                        >
+                            🌐 This Repo (GitHub)
+                        </button>
                     </div>
                     <div className="modal-actions">
                         <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>

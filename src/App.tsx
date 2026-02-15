@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import './App.css'
 import Header from './components/Header'
 import HeroSection from './components/HeroSection'
@@ -18,10 +18,19 @@ function App() {
   const [showModal, setShowModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const scanLock = useRef(false)
+
   const handleScan = async (directory: string) => {
+    if (scanLock.current) return
+    scanLock.current = true
+
+    // Force visible state update
     setIsScanning(true)
     setError(null)
     setShowModal(false)
+    setScanData(null) // Reset previous data
+
+    const startTime = Date.now()
 
     try {
       const res = await fetch('http://localhost:3001/api/scan', {
@@ -36,12 +45,20 @@ function App() {
       }
 
       const data = await res.json()
+
+      // UX: Ensure scanning animation plays for at least 2.5 seconds
+      const elapsed = Date.now() - startTime
+      if (elapsed < 2500) {
+        await new Promise(resolve => setTimeout(resolve, 2500 - elapsed))
+      }
+
       setScanData(data)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to connect to SecureOps API. Make sure the server is running on port 3001.'
+      const message = err instanceof Error ? err.message : 'Failed to connect to SecureOps API.'
       setError(message)
     } finally {
       setIsScanning(false)
+      scanLock.current = false
     }
   }
 
