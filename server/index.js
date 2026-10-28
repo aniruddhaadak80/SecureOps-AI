@@ -7,6 +7,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Simple in-memory rate limiter for scan endpoint
+const _rateBuckets = new Map();
+function rateLimitScan(req, res, next) {
+    const key = req.ip || req.connection?.remoteAddress || 'unknown';
+    const now = Date.now();
+    const windowMs = 60 * 1000;
+    const max = 10;
+    let bucket = _rateBuckets.get(key);
+    if (!bucket || now - bucket.start > windowMs) {
+        bucket = { start: now, count: 0 };
+        _rateBuckets.set(key, bucket);
+    }
+    bucket.count += 1;
+    if (bucket.count > max) {
+        return res.status(429).json({ error: 'Too many requests, please try again later' });
+    }
+    next();
+}
+
 // ============ Security Patterns (from code-scanner MCP) ============
 const SECURITY_PATTERNS = [
     {
@@ -266,16 +285,27 @@ if (!fs.existsSync(TEMP_DIR)) {
 }
 
 // ============ Helpers ============
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 async function cloneRepo(url) {
-    const repoName = url.split('/').pop().replace('.git', '');
+    // Validate URL to prevent command injection / option injection
+    if (typeof url !== 'string' || url.length === 0 || url.length > 2048) {
+        throw new Error('Invalid repository URL');
+    }
+    if (url.startsWith('-') || !/^(https?:\/\/|git@|github\.com)/.test(url)) {
+        throw new Error('Only http(s)/git/ github.com URLs are allowed');
+    }
+    if (/[;&|`$(){}<>\\\n\r]/.test(url)) {
+        throw new Error('Invalid characters in repository URL');
+    }
+    const repoName = url.split('/').pop().replace('.git', '').replace(/[^a-zA-Z0-9._-]/g, '');
+    if (!repoName) throw new Error('Could not determine repository name');
     const targetDir = path.join(TEMP_DIR, `${repoName}-${Date.now()}`);
 
     try {
-        await execAsync(`git clone "${url}" "${targetDir}"`);
+        await execFileAsync('git', ['clone', '--', url, targetDir]);
         return targetDir;
     } catch (err) {
         throw new Error(`Failed to clone repository: ${err.message}`);
@@ -301,7 +331,7 @@ app.get('/', (req, res) => {
 });
 
 // POST /api/scan — Full pipeline scan
-app.post('/api/scan', async (req, res) => {
+app.post('/api/scan', rateLimitScan, async (req, res) => {
     let { directory } = req.body;
     let isTemp = false;
 
@@ -321,7 +351,13 @@ app.post('/api/scan', async (req, res) => {
         }
 
         const resolvedPath = path.resolve(directory);
-        if (!fs.existsSync(resolvedPath)) {
+        // Prevent path traversal: only allow paths within TEMP_DIR or current working dir
+        const allowedRoots = [path.resolve(TEMP_DIR), path.resolve(process.cwd())];
+        const isAllowed = allowedRoots.some(root => resolvedPath === root || resolvedPath.startsWith(root + path.sep));
+        if (!isAllowed) {
+            return res.status(400).json({ error: 'Directory not allowed' });
+        }
+        if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isDirectory()) {
             return res.status(400).json({ error: `Directory not found: ${resolvedPath}` });
         }
 
